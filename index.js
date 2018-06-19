@@ -12,7 +12,7 @@ module.exports = function(source) {
 	modulePaths.load = nodeResolve("pug-load", {basedir: dirname(modulePaths.pug)});
 	modulePaths.runtime = nodeResolve("pug-runtime", {basedir: dirname(modulePaths.pug)});
 
-	var pug = require(modulePaths.pug);
+	var pug = require("pug");
 	var load = require(modulePaths.load);
 
 	var req = loaderUtils.getRemainingRequest(this).replace(/^!/, "");
