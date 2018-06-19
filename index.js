@@ -133,31 +133,55 @@ module.exports = function(source) {
 
 	run();
 	function run() {
-		try {
-			var tmplFunc = pug.compileClient(source, {
-				filename: req,
-				doctype: query.doctype || "html",
-				pretty: query.pretty,
-				self: query.self,
-				compileDebug: loaderContext.debug || false,
-				globals: ["require"].concat(query.globals || []),
-				name: "template",
-				inlineRuntimeFunctions: false,
-				filters: query.filters,
-				plugins: [
-					plugin
-				].concat(query.plugins || [])
-			});
-		} catch(e) {
-			if(missingFileMode) {
-				// Ignore, it'll continue after async action
-				missingFileMode = false;
+		if (!query.ignoreClient) {
+			try {
+				var tmplFunc = pug.compileClient(source, {
+					filename: req,
+					doctype: query.doctype || "html",
+					pretty: query.pretty,
+					self: query.self,
+					compileDebug: loaderContext.debug || false,
+					globals: ["require"].concat(query.globals || []),
+					name: "template",
+					inlineRuntimeFunctions: false,
+					plugins: [
+						plugin
+					].concat(query.plugins || [])
+				});
+			} catch(e) {
+				if (missingFileMode) {
+					missingFileMode = false;
+					return;
+				}
+				loaderContext.callback(e);
 				return;
 			}
-			loaderContext.callback(e);
-			return;
+			var runtime = "var pug = require(" + loaderUtils.stringifyRequest(loaderContext, "!" + modulePaths.runtime) + ");\n\n";
+			loaderContext.callback(null, runtime + tmplFunc.toString() + ";\nmodule.exports = template;");
+		} else {
+			try {
+				var tmpl = pug.compile(source, {
+					filename: req,
+					doctype: query.doctype || "html",
+					pretty: query.pretty,
+					self: query.self,
+					compileDebug: loaderContext.debug || false,
+					globals: ["require"].concat(query.globals || []),
+					name: "template",
+					inlineRuntimeFunctions: false,
+					plugins: [
+						plugin
+					].concat(query.plugins || [])
+				})({});
+			} catch(e) {
+				if (missingFileMode) {
+					missingFileMode = false;
+					return;
+				}
+				loaderContext.callback(e);
+				return;
+			}
+			loaderContext.callback(null, "module.exports = `" + tmpl + "`;"); 
 		}
-		var runtime = "var pug = require(" + loaderUtils.stringifyRequest(loaderContext, "!" + modulePaths.runtime) + ");\n\n";
-		loaderContext.callback(null, runtime + tmplFunc.toString() + ";\nmodule.exports = template;");
 	}
 }
